@@ -239,7 +239,15 @@ var (
 	StyleBase = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#a7a")).
 			BorderForeground(lipgloss.Color("#a38")).
-			Align(lipgloss.Right)
+			Align(lipgloss.Left).Padding(0, 1)
+
+	StyleBaseRow = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38")).
+			Align(lipgloss.Left).Padding(0, 1)
+	StyleCentered = lipgloss.NewStyle().Align(lipgloss.Center).Padding(0, 1)
+	StyleLeft     = lipgloss.NewStyle().Align(lipgloss.Left).Margin(0, 1)
+	StyleRight    = lipgloss.NewStyle().Align(lipgloss.Right).Padding(0, 1)
 )
 
 const (
