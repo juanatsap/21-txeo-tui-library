@@ -281,3 +281,23 @@ var (
 	// Gradient colors we'll use for the progress bar
 	Ramp = makeRampStyles("#B14FFF", "#00FFA3", ProgressBarWidth)
 )
+
+/* ╭──────────────────────────────────────────╮ */
+/* │                  TRELLO                  │ */
+/* ╰──────────────────────────────────────────╯ */
+var (
+	// Status Bar.
+	CurrentTrelloBoardStyle    = StatusNugget.Foreground(lipgloss.AdaptiveColor{Dark: "#343433", Light: "#C1C6B2"}).Background(lipgloss.Color("#e4f0f8")).Align(lipgloss.Right).Bold(true)
+	CurrentTrelloListStyle     = StatusNugget.Background(lipgloss.Color("#377ec4"))
+	CurrentTrelloUsernameStyle = StatusNugget.Background(lipgloss.Color("#4988c8ae"))
+	// General styles
+	// Colores inspirados en Trello
+	TrelloBlue       = "#0079BF"
+	TrelloBackground = "#EBECF0"
+
+	ViewportTitleStyle = func() lipgloss.Style {
+		b := lipgloss.RoundedBorder()
+		b.Right = "├"
+		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
+	}()
+)
