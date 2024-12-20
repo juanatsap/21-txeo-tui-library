@@ -1,7 +1,11 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucasb-eyer/go-colorful"
+	"github.com/muesli/termenv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -31,7 +35,7 @@ var ColorMap = map[float64]string{
 var TitleCaser = cases.Title(language.Und)
 
 // ANSI Color definitions.
-var ( // ANSI escape codes for colors
+var (
 	Red     = "\033[31m"
 	Green   = "\033[32m"
 	Yellow  = "\033[33m"
@@ -301,3 +305,33 @@ var (
 		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
 	}()
 )
+
+var (
+	Term      = termenv.EnvColorProfile()
+	SubtleII  = makeFgStyle("241")
+	Dot       = ColorFg(" • ", "236")
+	HelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render
+)
+
+func ColorToHex(c colorful.Color) string {
+	return fmt.Sprintf("#%s%s%s", colorFloatToHex(c.R), colorFloatToHex(c.G), colorFloatToHex(c.B))
+}
+func ColorFloatToHex(f float64) string {
+	return colorFloatToHex(f)
+}
+func MakeRamp(colorA, colorB string, steps float64) (s []lipgloss.Style) {
+	cA, _ := colorful.Hex(colorA)
+	cB, _ := colorful.Hex(colorB)
+
+	for i := 0.0; i < steps; i++ {
+		c := cA.BlendLuv(cB, i/steps)
+		s = append(s, lipgloss.NewStyle().Foreground(lipgloss.Color(ColorToHex(c))))
+	}
+	return
+}
+func ColorFg(val, color string) string {
+	return termenv.String(val).Foreground((Term.Color(color))).String()
+}
+func makeFgStyle(color string) func(...string) string {
+	return lipgloss.Style{}.Foreground(lipgloss.Color(color)).Render
+}
