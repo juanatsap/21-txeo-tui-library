@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"hash/fnv"
 	"image/color"
+	"net/http"
+	"strconv"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/logrusorgru/aurora"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/muesli/termenv"
 	"golang.org/x/text/cases"
@@ -480,4 +483,19 @@ func hexToRGB(hex string) (uint8, uint8, uint8) {
 	var r, g, b uint8
 	fmt.Sscanf(hex, "#%02X%02X%02X", &r, &g, &b)
 	return r, g, b
+}
+func GetStatusColor(status int) aurora.Value {
+	var statusColor aurora.Value
+	statusSpaced := " " + strconv.Itoa(status) + " "
+	switch {
+	case status >= http.StatusInternalServerError:
+		statusColor = aurora.BgRed(aurora.White(statusSpaced))
+	case status >= http.StatusBadRequest:
+		statusColor = aurora.BgYellow(aurora.Black(statusSpaced))
+	case status >= http.StatusMultipleChoices:
+		statusColor = aurora.BgCyan(aurora.Black(statusSpaced))
+	default:
+		statusColor = aurora.BgGreen(aurora.Black(statusSpaced))
+	}
+	return statusColor
 }
