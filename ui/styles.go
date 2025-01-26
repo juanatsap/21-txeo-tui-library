@@ -2,6 +2,8 @@ package ui
 
 import (
 	"fmt"
+	"hash/fnv"
+	"image/color"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
@@ -30,6 +32,31 @@ var ColorMap = map[float64]string{
 	1.0: "#F8D091",
 	0.5: "#F8D495",
 	0.0: "", // Pastel Orange (safety)
+}
+
+// Color map for latencies in seconds (soft pastel colors)
+var LatencyColorMap = map[float64]string{
+	0.0:  "#FFFFFF", // Pure White (ideal)
+	0.25: "#FFF9E6", // Very Light Yellow
+	0.5:  "#FFF3CC", // Soft Yellow
+	0.75: "#FFECCC", // Pale Yellow
+	1.0:  "#FFE6B3", // Light Yellow
+	1.25: "#FFDF99", // Soft Pastel Yellow
+	1.5:  "#FFD980", // Medium Pastel Yellow
+	1.75: "#FFD366", // Yellow-Orange
+	2.0:  "#FFCC66", // Light Orange
+	2.25: "#FFB84D", // Pastel Orange
+	2.5:  "#FFA333", // Softer Orange-Red
+	2.75: "#FF8F33", // Soft Red-Orange
+	3.0:  "#FF7A33", // Muted Orange-Red
+	3.25: "#FF664D", // Soft Red
+	3.5:  "#FF5233", // Medium Red
+	3.75: "#FF3D33", // Muted Red
+	4.0:  "#FF2922", // Deeper Red
+	4.25: "#FF1500", // Deep Red
+	4.5:  "#E60000", // Strong Softened Red
+	4.75: "#CC0000", // Very Deep Red
+	5.0:  "#990000", // Pure Dark Red (Critical)
 }
 
 var TitleCaser = cases.Title(language.Und)
@@ -334,4 +361,123 @@ func ColorFg(val, color string) string {
 }
 func makeFgStyle(color string) func(...string) string {
 	return lipgloss.Style{}.Foreground(lipgloss.Color(color)).Render
+}
+
+// hashRGB genera un color (pseudo-aleatorio) en [0..255] para R,G,B
+func hashRGB(s string) (r, g, b byte) {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(s))
+	sum := h.Sum32()
+	r = byte(sum >> 16)
+	g = byte(sum >> 8)
+	b = byte(sum)
+	return
+}
+
+// brightness calcula una aproximación de la luminancia
+func brightness(r, g, b byte) float64 {
+	return 0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)
+}
+
+// lighten opcional: si quieres asegurar que no sea muy oscuro
+func Lighten(c color.RGBA, factor float64) color.RGBA {
+	// factor: 0.0 (sin cambio), 0.5 (ilumina 50%), etc.
+	rr := float64(c.R)
+	gg := float64(c.G)
+	bb := float64(c.B)
+
+	rr = rr + (255-rr)*factor
+	gg = gg + (255-gg)*factor
+	bb = bb + (255-bb)*factor
+
+	return color.RGBA{
+		R: uint8(rr),
+		G: uint8(gg),
+		B: uint8(bb),
+		A: 255,
+	}
+}
+
+// coloredString usa Lipgloss para convertir el IP en un 'badge' coloreado
+func ColoredString(stringToColor string) string {
+	r, g, b := hashRGB(stringToColor)
+	// Opcional: iluminar para evitar colores muy oscuros
+	c := Lighten(color.RGBA{R: r, G: g, B: b, A: 255}, 0.4)
+	r, g, b = c.R, c.G, c.B
+
+	// Generamos string “#RRGGBB” para Lipgloss
+	bgHex := fmt.Sprintf("#%02X%02X%02X", r, g, b)
+	bgColor := lipgloss.Color(bgHex)
+
+	// Determina foreground (blanco/negro) dependiendo de la luminosidad
+	var fgHex string
+	if brightness(r, g, b) > 128 {
+		fgHex = "#000000"
+	} else {
+		fgHex = "#FFFFFF"
+	}
+
+	// Creamos estilo Lipgloss
+	style := lipgloss.NewStyle().
+		Background(bgColor).
+		Foreground(lipgloss.Color(fgHex)).
+		Bold(true).
+		Padding(0, 1) // espacio extra a los lados
+
+	// Renderizamos el IP
+	return style.Render(stringToColor)
+}
+
+func InterpolateHexColor(color1, color2 string, t float64) string {
+	// Convierte colores hex a RGB
+	r1, g1, b1 := hexToRGB(color1)
+	r2, g2, b2 := hexToRGB(color2)
+
+	// Interpola cada componente
+	r := uint8(float64(r1)*(1-t) + float64(r2)*t)
+	g := uint8(float64(g1)*(1-t) + float64(g2)*t)
+	b := uint8(float64(b1)*(1-t) + float64(b2)*t)
+
+	// Retorna como hex
+	return fmt.Sprintf("#%02X%02X%02X", r, g, b)
+}
+
+// GenerateGradient creates a gradient of colors between start and end in `steps` steps.
+func GenerateGradient(startHex, midHex, endHex string, steps int, lightenFactor float64) []string {
+	startR, startG, startB := hexToRGB(startHex)
+	midR, midG, midB := hexToRGB(midHex)
+	endR, endG, endB := hexToRGB(endHex)
+
+	gradient := make([]string, steps)
+	midpoint := steps / 2
+
+	for i := 0; i < steps; i++ {
+		var r, g, b uint8
+		if i < midpoint {
+			// Interpolate between start and mid
+			t := float64(i) / float64(midpoint)
+			r = uint8(float64(startR)*(1-t) + float64(midR)*t)
+			g = uint8(float64(startG)*(1-t) + float64(midG)*t)
+			b = uint8(float64(startB)*(1-t) + float64(midB)*t)
+		} else {
+			// Interpolate between mid and end
+			t := float64(i-midpoint) / float64(steps-midpoint)
+			r = uint8(float64(midR)*(1-t) + float64(endR)*t)
+			g = uint8(float64(midG)*(1-t) + float64(endG)*t)
+			b = uint8(float64(midB)*(1-t) + float64(endB)*t)
+		}
+
+		// Lighten the color
+		lightened := Lighten(color.RGBA{R: r, G: g, B: b, A: 255}, lightenFactor)
+		gradient[i] = fmt.Sprintf("#%02X%02X%02X", lightened.R, lightened.G, lightened.B)
+	}
+
+	return gradient
+}
+
+// Convert hex color to RGB
+func hexToRGB(hex string) (uint8, uint8, uint8) {
+	var r, g, b uint8
+	fmt.Sscanf(hex, "#%02X%02X%02X", &r, &g, &b)
+	return r, g, b
 }
